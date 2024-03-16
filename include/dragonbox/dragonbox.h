@@ -336,12 +336,16 @@ namespace jkj {
         struct default_float_traits {
             // I don't know if there is a truly reliable way of detecting
             // IEEE-754 binary32/binary64 formats; I just did my best here.
+#if ESTD_BRINGUP_WORKAROUND
+            // ESTD missing 'radix' at this time
+#else
             static_assert(detail::stdr::numeric_limits<T>::is_iec559 &&
                               detail::stdr::numeric_limits<T>::radix == 2 &&
                               (detail::physical_bits<T>::value == 32 ||
                                detail::physical_bits<T>::value == 64),
                           "default_ieee754_traits only works for 32-bits or 64-bits types "
                           "supporting binary32 or binary64 formats!");
+#endif
 
             // The type that is being viewed.
             using type = T;
