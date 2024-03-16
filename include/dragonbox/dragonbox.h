@@ -19,6 +19,8 @@
 #ifndef JKJ_HEADER_DRAGONBOX
 #define JKJ_HEADER_DRAGONBOX
 
+#include "dragonconf.h"
+
 // Attribute for storing static data into a dedicated place, e.g. flash memory. Every ODR-used static
 // data declaration will be decorated with this macro. The users may define this macro, before including
 // the library headers, into whatever they want.
