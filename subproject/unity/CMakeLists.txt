@@ -30,8 +30,21 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(estd)
 
 include(sources.cmake)
+# NOTE: I prefer target_include_directories, but in this case we must
+# pull a prepend shenanigan so that to_chars cpp can pick it up
+include_directories(BEFORE .)
+# NOTE: Not working because dragonbox_to_chars is (reasonably) STATIC and not
+# INTERFACE, but in this case it needs INTERFACE to work
+#include_directories(BEFORE ../pio/basic/include)
+
+add_subdirectory(../.. dragonbox)
 
 # DEBT: Switch this over to a lib, someday
 add_executable(${PROJECT_NAME} main.cpp ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} unity estd)
+#target_include_directories(${PROJECT_NAME} PUBLIC .)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC unity estd)
+target_link_libraries(${PROJECT_NAME} PUBLIC dragonbox_to_chars)
+
+#target_include_directories(${PROJECT_NAME} PUBLIC ../pio/basic/include)
