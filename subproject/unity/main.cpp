@@ -2,12 +2,14 @@
 #include <estd/string.h>
 #include <dragonbox/dragonbox_to_chars.h>
 
+void test_to_chars();
+
+
 int main()
 {
-    char buffer[128];
-    jkj::dragonbox::to_chars(0.3, buffer);
-
     UNITY_BEGIN();
+
+    test_to_chars();
 
     UNITY_END();
 
