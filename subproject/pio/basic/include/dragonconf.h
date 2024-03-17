@@ -10,19 +10,7 @@
 
 namespace estd {
 
-using ::int_least32_t;
-using ::int_least64_t;
-
-using ::uint_least32_t;
-using ::uint_least64_t;
-
 using ::memcpy;
-
-template <class T>
-struct is_trivially_copyable;
-
-template <class T>
-using is_unsigned = bool_constant<!numeric_limits<T>::is_signed>;
 
 // DEBT: Concerningly, this collides with numeric_limits<unsigned long long> which itself
 // cascades down to internal::numeric_limits<uint32_t> - this very much seems like
