@@ -39,17 +39,34 @@ set(dragonbox_to_chars_headers
 
 set(dragonbox_to_chars_sources source/dragonbox_to_chars.cpp)
 
-add_library(dragonbox_to_chars STATIC
+option(DRAGONBOX_TO_CHARS_INTERFACE
+    "Whether to use INTERFACE linkage for dragonbox_to_chars"
+    Off
+    )
+
+if(DRAGONBOX_TO_CHARS_INTERFACE)
+    set(DRAGONBOX_TO_CHARS_LINKAGE INTERFACE)
+    set(DRAGONBOX_TO_CHARS_VISIBILITY INTERFACE)
+else()
+    set(DRAGONBOX_TO_CHARS_LINKAGE STATIC)
+    set(DRAGONBOX_TO_CHARS_VISIBILITY PUBLIC)
+endif()
+
+message(DEBUG "Linkage: ${DRAGONBOX_TO_CHARS_LINKAGE}")
+
+add_library(dragonbox_to_chars ${DRAGONBOX_TO_CHARS_LINKAGE})
+target_sources(dragonbox_to_chars ${DRAGONBOX_TO_CHARS_VISIBILITY}
         ${dragonbox_to_chars_headers}
         ${dragonbox_to_chars_sources})
+
 add_library(dragonbox::dragonbox_to_chars ALIAS dragonbox_to_chars)
 
 target_include_directories(dragonbox_to_chars
         ${dragonbox_warning_guard}
-        PUBLIC
+        ${DRAGONBOX_TO_CHARS_VISIBILITY}
         "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>")
 
-target_compile_features(dragonbox_to_chars PUBLIC cxx_std_17)
+target_compile_features(dragonbox_to_chars ${DRAGONBOX_TO_CHARS_VISIBILITY} cxx_std_17)
 
 # ---- Install ----
 
