@@ -47,13 +47,12 @@ int main() {
     using namespace jkj::dragonbox::detail::log;
     using namespace jkj::dragonbox::detail::wuint;
     using info = jkj::dragonbox::detail::compressed_cache_detail<jkj::dragonbox::ieee754_binary64>;
-    using impl = jkj::dragonbox::detail::impl<double>;
+    using impl = jkj::dragonbox::detail::impl<jkj::dragonbox::ieee754_binary64, std::uint_least64_t>;
 
     std::cout << "[Verifying cache recovery for compressed cache...]\n";
 
     jkj::unsigned_rational<jkj::big_uint> unit;
     auto n_max = jkj::big_uint::power_of_2(impl::significand_bits + 2);
-    int prev_k = impl::max_k + 1;
     for (int e = impl::min_exponent - impl::significand_bits;
          e <= impl::max_exponent - impl::significand_bits; ++e) {
         int const k = impl::kappa - floor_log10_pow2(e);
@@ -76,7 +75,7 @@ int main() {
             auto const pow5 = info::pow5.table[offset];
 
             // Compute the required amount of bit-shifts.
-            auto const alpha = floor_log2_pow10(kb + offset) - floor_log2_pow10(kb) - offset;
+            auto const alpha = floor_log2_pow10(k) - floor_log2_pow10(kb) - offset;
             assert(alpha > 0 && alpha < 64);
 
             // Try to recover the real cache.
@@ -92,7 +91,8 @@ int main() {
                                       ((middle_low.low() >> alpha) | middle_to_low)};
 
             if (recovered_cache.low() + 1 == 0) {
-                std::cout << "Overflow detected.\n";
+                std::cout << "Overflow detected - taking the ceil requires addition-with-carry (e = "
+                          << e << ")\n ";
                 return -1;
             }
             else {

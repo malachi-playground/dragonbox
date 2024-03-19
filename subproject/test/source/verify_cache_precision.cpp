@@ -69,7 +69,9 @@ template <class FloatTraits>
 bool analyze(std::ostream& out) {
     out << "e,bits_for_multiplication,bits_for_integer_check\n";
 
-    using impl = jkj::dragonbox::detail::impl<typename FloatTraits::type, FloatTraits>;
+    using format = typename FloatTraits::format;
+    using carrier_uint = typename FloatTraits::carrier_uint;
+    using impl = jkj::dragonbox::detail::impl<format, carrier_uint>;
     using namespace jkj::dragonbox::detail::log;
 
     auto n_max = jkj::big_uint::power_of_2(impl::significand_bits + 2);
@@ -292,7 +294,7 @@ bool analyze(std::ostream& out) {
                     std::cout << "\n    n is smaller than " << threshold
                               << ", so this case is a false positive.";
                 }
-                else if (ec.e == -81 && n == 29711844 || ec.e == -80 && n == 29711844) {
+                else if ((ec.e == -81 && n == 29711844) || (ec.e == -80 && n == 29711844)) {
                     std::cout << "\n    This case has been carefully addressed.";
                 }
                 else {

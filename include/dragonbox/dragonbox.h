@@ -1797,7 +1797,7 @@ namespace jkj {
 
         namespace detail {
             // Forward declare the implementation class.
-            template <class Float, class FloatTraits = default_float_traits<Float>>
+            template <class FloatFormat, class CarrierUInt>
             struct impl;
 
             namespace policy_impl {
@@ -2348,8 +2348,8 @@ namespace jkj {
                                 }
                                 else {
                                     // Compute the required amount of bit-shift.
-                                    auto const alpha = log::floor_log2_pow10(kb + offset) -
-                                                       log::floor_log2_pow10(kb) - offset;
+                                    auto const alpha =
+                                        log::floor_log2_pow10(k) - log::floor_log2_pow10(kb) - offset;
                                     assert(alpha > 0 && alpha < 64);
 
                                     // Try to recover the real cache.
@@ -2463,12 +2463,12 @@ namespace jkj {
             // The main algorithm.
             ////////////////////////////////////////////////////////////////////////////////////////
 
-            template <class Float, class FloatTraits>
-            struct impl : private FloatTraits, private FloatTraits::format {
-                using format = typename FloatTraits::format;
-                using carrier_uint = typename FloatTraits::carrier_uint;
+            template <class FloatFormat, class CarrierUInt>
+            struct impl : private FloatFormat {
+                using format = FloatFormat;
+                using carrier_uint = CarrierUInt;
+                static constexpr int carrier_bits = int(physical_bits<carrier_uint>::value);
 
-                using FloatTraits::carrier_bits;
                 using format::significand_bits;
                 using format::min_exponent;
                 using format::max_exponent;
@@ -2528,10 +2528,12 @@ namespace jkj {
                     bool parity;
                     bool is_integer;
                 };
-                template <class FloatFormat, class Dummy = void>
+                // FloatFormat2 is supposed to be FloatFormat, but need to use a different name to avoid
+                // shadowing.
+                template <class FloatFormat2, class Dummy = void>
                 struct compute_mul_impl;
 
-                //// The main algorithm assumes the input is a normal/subnormal finite number
+                //// The main algorithm assumes the input is a normal/subnormal finite number.
 
                 template <class ReturnType, class IntervalType, class TrailingZeroPolicy,
                           class BinaryToDecimalRoundingPolicy, class CachePolicy,
@@ -2540,7 +2542,7 @@ namespace jkj {
                 compute_nearest_normal(carrier_uint const two_fc, int const binary_exponent,
                                        AdditionalArgs... additional_args) noexcept {
                     //////////////////////////////////////////////////////////////////////
-                    // Step 1: Schubfach multiplier calculation
+                    // Step 1: Schubfach multiplier calculation.
                     //////////////////////////////////////////////////////////////////////
 
                     IntervalType interval_type{additional_args...};
@@ -2568,7 +2570,7 @@ namespace jkj {
 
 
                     //////////////////////////////////////////////////////////////////////
-                    // Step 2: Try larger divisor; remove trailing zeros if necessary
+                    // Step 2: Try larger divisor; remove trailing zeros if necessary.
                     //////////////////////////////////////////////////////////////////////
 
                     constexpr auto big_divisor = compute_power<kappa + 1>(stdr::uint_least32_t(10));
@@ -2625,7 +2627,7 @@ namespace jkj {
 
 
                     //////////////////////////////////////////////////////////////////////
-                    // Step 3: Find the significand with the smaller divisor
+                    // Step 3: Find the significand with the smaller divisor.
                     //////////////////////////////////////////////////////////////////////
 
                     decimal_significand *= 10;
@@ -2755,7 +2757,7 @@ namespace jkj {
                 JKJ_FORCEINLINE JKJ_SAFEBUFFERS static JKJ_CONSTEXPR20 ReturnType
                 compute_left_closed_directed(carrier_uint const two_fc, int binary_exponent) noexcept {
                     //////////////////////////////////////////////////////////////////////
-                    // Step 1: Schubfach multiplier calculation
+                    // Step 1: Schubfach multiplier calculation.
                     //////////////////////////////////////////////////////////////////////
 
                     // Compute k and beta.
@@ -2785,7 +2787,7 @@ namespace jkj {
                     }
 
                     //////////////////////////////////////////////////////////////////////
-                    // Step 2: Try larger divisor; remove trailing zeros if necessary
+                    // Step 2: Try larger divisor; remove trailing zeros if necessary.
                     //////////////////////////////////////////////////////////////////////
 
                     constexpr auto big_divisor = compute_power<kappa + 1>(stdr::uint_least32_t(10));
@@ -2830,7 +2832,7 @@ namespace jkj {
 
 
                     //////////////////////////////////////////////////////////////////////
-                    // Step 3: Find the significand with the smaller divisor
+                    // Step 3: Find the significand with the smaller divisor.
                     //////////////////////////////////////////////////////////////////////
 
                     decimal_significand *= 10;
@@ -2844,7 +2846,7 @@ namespace jkj {
                 compute_right_closed_directed(carrier_uint const two_fc, int const binary_exponent,
                                               bool shorter_interval) noexcept {
                     //////////////////////////////////////////////////////////////////////
-                    // Step 1: Schubfach multiplier calculation
+                    // Step 1: Schubfach multiplier calculation.
                     //////////////////////////////////////////////////////////////////////
 
                     // Compute k and beta.
@@ -2863,7 +2865,7 @@ namespace jkj {
 
 
                     //////////////////////////////////////////////////////////////////////
-                    // Step 2: Try larger divisor; remove trailing zeros if necessary
+                    // Step 2: Try larger divisor; remove trailing zeros if necessary.
                     //////////////////////////////////////////////////////////////////////
 
                     constexpr auto big_divisor = compute_power<kappa + 1>(stdr::uint_least32_t(10));
@@ -2896,7 +2898,7 @@ namespace jkj {
 
 
                     //////////////////////////////////////////////////////////////////////
-                    // Step 3: Find the significand with the small divisor
+                    // Step 3: Find the significand with the small divisor.
                     //////////////////////////////////////////////////////////////////////
 
                     decimal_significand *= 10;
@@ -3336,7 +3338,7 @@ namespace jkj {
                            to_decimal_policy_holder<Policies...>::return_has_sign,
                            to_decimal_policy_holder<Policies...>::report_trailing_zeros>;
 
-            template <class Float, class FloatTraits, class PolicyHolder, class IntervalTypeProvider>
+            template <class FloatTraits, class PolicyHolder, class IntervalTypeProvider>
             struct invoke_shorter_dispatcher {
                 using unsigned_return_type = decimal_fp<typename FloatTraits::carrier_uint, false,
                                                         PolicyHolder::report_trailing_zeros>;
@@ -3344,15 +3346,16 @@ namespace jkj {
                 template <class... Args>
                 JKJ_FORCEINLINE JKJ_SAFEBUFFERS JKJ_CONSTEXPR20 unsigned_return_type
                 operator()(Args... args) noexcept {
-                    return impl<Float, FloatTraits>::template compute_nearest_shorter<
-                        unsigned_return_type, typename IntervalTypeProvider::shorter_interval_type,
-                        typename PolicyHolder::trailing_zero_policy,
-                        typename PolicyHolder::binary_to_decimal_rounding_policy,
-                        typename PolicyHolder::cache_policy>(args...);
+                    return impl<typename FloatTraits::format, typename FloatTraits::carrier_uint>::
+                        template compute_nearest_shorter<
+                            unsigned_return_type, typename IntervalTypeProvider::shorter_interval_type,
+                            typename PolicyHolder::trailing_zero_policy,
+                            typename PolicyHolder::binary_to_decimal_rounding_policy,
+                            typename PolicyHolder::cache_policy>(args...);
                 }
             };
 
-            template <class Float, class FloatTraits, class PolicyHolder, class IntervalTypeProvider>
+            template <class FloatTraits, class PolicyHolder, class IntervalTypeProvider>
             struct invoke_normal_dispatcher {
                 using unsigned_return_type = decimal_fp<typename FloatTraits::carrier_uint, false,
                                                         PolicyHolder::report_trailing_zeros>;
@@ -3360,11 +3363,12 @@ namespace jkj {
                 template <class... Args>
                 JKJ_FORCEINLINE JKJ_SAFEBUFFERS JKJ_CONSTEXPR20 unsigned_return_type
                 operator()(Args... args) noexcept {
-                    return impl<Float, FloatTraits>::template compute_nearest_normal<
-                        unsigned_return_type, typename IntervalTypeProvider::normal_interval_type,
-                        typename PolicyHolder::trailing_zero_policy,
-                        typename PolicyHolder::binary_to_decimal_rounding_policy,
-                        typename PolicyHolder::cache_policy>(args...);
+                    return impl<typename FloatTraits::format, typename FloatTraits::carrier_uint>::
+                        template compute_nearest_normal<
+                            unsigned_return_type, typename IntervalTypeProvider::normal_interval_type,
+                            typename PolicyHolder::trailing_zero_policy,
+                            typename PolicyHolder::binary_to_decimal_rounding_policy,
+                            typename PolicyHolder::cache_policy>(args...);
                 }
             };
 
@@ -3424,7 +3428,7 @@ namespace jkj {
                                 signed_significand_bits,
                                 IntervalTypeProvider::invoke_shorter_interval_case(
                                     signed_significand_bits,
-                                    invoke_shorter_dispatcher<Float, FloatTraits, PolicyHolder,
+                                    invoke_shorter_dispatcher<FloatTraits, PolicyHolder,
                                                               IntervalTypeProvider>{},
                                     exponent));
                         }
@@ -3440,8 +3444,7 @@ namespace jkj {
                         signed_significand_bits,
                         IntervalTypeProvider::invoke_normal_interval_case(
                             signed_significand_bits,
-                            invoke_normal_dispatcher<Float, FloatTraits, PolicyHolder,
-                                                     IntervalTypeProvider>{},
+                            invoke_normal_dispatcher<FloatTraits, PolicyHolder, IntervalTypeProvider>{},
                             two_fc, exponent));
                 }
                 else JKJ_IF_CONSTEXPR(tag == decimal_to_binary_rounding::tag_t::left_closed_directed) {
@@ -3457,9 +3460,10 @@ namespace jkj {
 
                     return PolicyHolder::handle_sign(
                         signed_significand_bits,
-                        detail::impl<Float, FloatTraits>::template compute_left_closed_directed<
-                            unsigned_return_type, typename PolicyHolder::trailing_zero_policy,
-                            typename PolicyHolder::cache_policy>(two_fc, exponent));
+                        detail::impl<typename FloatTraits::format, typename FloatTraits::carrier_uint>::
+                            template compute_left_closed_directed<
+                                unsigned_return_type, typename PolicyHolder::trailing_zero_policy,
+                                typename PolicyHolder::cache_policy>(two_fc, exponent));
                 }
                 else {
 #if JKJ_HAS_IF_CONSTEXPR
@@ -3483,9 +3487,11 @@ namespace jkj {
 
                     return PolicyHolder::handle_sign(
                         signed_significand_bits,
-                        detail::impl<Float, FloatTraits>::template compute_right_closed_directed<
-                            unsigned_return_type, typename PolicyHolder::trailing_zero_policy,
-                            typename PolicyHolder::cache_policy>(two_fc, exponent, shorter_interval));
+                        detail::impl<typename FloatTraits::format, typename FloatTraits::carrier_uint>::
+                            template compute_right_closed_directed<
+                                unsigned_return_type, typename PolicyHolder::trailing_zero_policy,
+                                typename PolicyHolder::cache_policy>(two_fc, exponent,
+                                                                     shorter_interval));
                 }
             }
 
