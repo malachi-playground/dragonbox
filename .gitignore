@@ -52,6 +52,9 @@ build/
 # *.iml
 # *.ipr
 
+# Qt Creator
+build-*/
+
 # CMake
 cmake-build-*/
 
