@@ -20,6 +20,8 @@ using ::memcpy;
 #define ESTD_BRINGUP_WORKAROUND 1
 // TODO: Implement 'radix' on numeric_limits
 
+#define JKJ_STATIC_DATA_SECTION PROGMEM
+
 // Arduino annoyances
 #undef min
 #undef max
